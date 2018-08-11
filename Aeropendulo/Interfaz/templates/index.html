@@ -1,0 +1,786 @@
+{% load staticfiles %}
+
+<html>
+<head>
+
+	<meta charset=utf-8 />
+
+	<title>Aeropéndulo</title>
+
+	<script src="{% static 'js/jquery.min.js' %}"></script>
+	<script src="{% static 'js/jQueryRotate.js' %}"></script>
+	<script src="{% static 'js/js.cookie.min.js' %}"></script>
+	<script src="{% static 'js/Chart.min.js' %}"></script>
+	<link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.2.0/css/all.css">
+	<script type="text/x-mathjax-config">
+		MathJax.Hub.Config({
+		showMathMenu: false
+	});
+</script>
+<script src='https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/MathJax.js?config=TeX-MML-AM_CHTML' async></script>
+
+
+{% csrf_token %}
+
+<style type="text/css">
+
+label{font-family: Helvetica;}
+
+
+.contenedorTabs section {
+	display: none;
+	padding: 20px 0 0;
+	border-top: 1px solid #ddd;
+}
+
+.contenedorTabs .input_c {
+	display: none;
+}
+
+.contenedorTabs .label_c {
+	display: inline-block;
+	margin: 0 0 -1px;
+	padding: 15px 25px;
+	font-weight: 600;
+	text-align: center;
+	color: #bbb;
+	border: 1px solid transparent;
+	font-family: Helvetica;
+}
+
+.contenedorTabs .label_c:before {
+	font-family: 'Font Awesome\ 5 Free';
+	margin-right: 10px;
+}
+
+.contenedorTabs .label_c[for*='1']:before { content: '\f5fd'; }
+.contenedorTabs .label_c[for*='2']:before { content: '\f5fc'; }
+
+.contenedorTabs .label_c[for*='2_1']:before { content: '\f5eb'; }
+.contenedorTabs .label_c[for*='2_2']:before { content: '\f5da'; }
+.contenedorTabs .label_c[for*='2_3']:before { content: '\f1c0'; }
+
+.contenedorTabs .label_c:hover {
+	color: #888;
+	cursor: pointer;
+}
+
+.contenedorTabs .input_c:checked + .label_c {
+	color: #555;
+	border: 1px solid #ddd;
+	border-top: 2px solid #1a6cb5;
+	border-bottom: 1px solid #fff;
+	font-family: Helvetica;
+}
+
+#tab1:checked ~ #content1,
+#tab2:checked ~ #content2,
+#tab2_1:checked ~ #content2_1,
+#tab2_2:checked ~ #content2_2,
+#tab2_3:checked ~ #content2_3 {display: block;}
+
+</style>
+
+<style type="text/css">
+
+/* The Modal (background) */
+.modal {
+	display: none; /* Hidden by default */
+	position: fixed; /* Stay in place */
+	z-index: 2000; /* Sit on top */
+	left: 0;
+	top: 0;
+	width: 100%; /* Full width */
+	height: 100%; /* Full height */
+	background-color: rgb(0,0,0); /* Fallback color */
+	background-color: rgba(0,0,0,0.4); /* Black w/ opacity */
+}
+
+/* Modal Content/Box */
+.modal-content {
+	background-color: #fff;
+	margin: 2% auto; /* 15% from the top and centered */
+	padding: 20px;
+	border: 1px solid #888;
+	width: 85%; /* Could be more or less, depending on screen size */
+	height: 85%;
+	overflow: auto; /* Enable scroll if needed */
+}
+input{
+	font-family: Helvetica;
+}
+
+/* The Close Button */
+.close {
+	float: right;
+}
+
+.close:hover,
+.close:focus {
+	cursor: pointer;
+}
+
+
+.select_box{
+	-webkit-appearance: menulist-button;
+	height:36.5px; 
+	width:300px;
+	margin:auto;
+	padding:10px;
+	font-size: 16px;
+}
+
+
+
+.modal{
+	font-family:Helvetica;
+}
+
+.modal h1{
+	font-size:30px;
+}
+.modal input,textarea{
+	padding:15px;
+	background:rgba(0,0,0,0.2);
+	color:#000;
+	border:0;
+	flex: 0 0 277px;
+}
+.modal input,textarea:focus,.modal input,textarea:active,.modal button:focus,.modal button:active{
+	outline:none;
+}
+.modal button{
+	background:#1a6cb5;
+	border:0;
+	color:#fff;
+	padding:10px;
+	font-size:20px;
+	cursor:pointer;
+}
+.modal button:active{
+	background:#164b79;
+}
+.modal label {
+	width: 160px;
+	padding-right: 0.5em;
+}
+
+</style>
+
+<script type="text/javascript">
+	modelo_activo = false;
+</script>
+
+</head>
+<body>
+
+	<label style="display:block;text-align: center;font-size: 30px;margin-top: 10px;margin-bottom: 10px;">Aeropéndulo - Taller de Control</label>
+
+	<div class="contenedorTabs" style="display: inline-block;">
+
+		<input id="tab1" type="radio" name="tabs" checked class="input_c">
+		<label for="tab1" class="label_c">Modelamiento</label>
+
+		<input id="tab2" type="radio" name="tabs" class="input_c">
+		<label for="tab2" class="label_c">Controladores</label>
+
+		<section id="content1">
+			<form onsubmit="enviarEntrada(); return false" style="margin-bottom: 0;">
+				<div style="margin-left: 10px;display: flex;align-items: center;">
+					<label>Entrada: </label><input autocomplete="off" type="text" id="campo_entrada" name="campo_entrada" placeholder="Función u(t) de entrada" style="padding: 12px 20px;width: 300px;margin:10px">
+					<button style="height: 41px;width: 41px;"><i id="iniciar_modelo" class="fa" style="color: green;font-size: 26px">&#xf04b;</i></button>
+
+				</div>
+			</form>
+			<div style="padding-left: 15px;padding-right: 15px;overflow-y: scroll;height: 73vh;border-style: solid;border-width: 1px">
+				<label style="font-weight: 100; margin-top: 10px;display: inline-block;">Modelo Matemático No Lineal</label>
+				<label style="font-family: 'Font Awesome\ 5 Free';color: #aaa;font-size: 24px;float:right;margin-top: 7px;cursor: pointer;font-weight: 900;" onclick="document.getElementById('myModal').style.display = 'block';">&#xf085;</label>
+				
+
+				<div class="chart-container_1" style="width: 700px;height: 200px;margin-top: 10px">
+					<canvas id="chart_1" ></canvas>
+				</div>
+
+				<label style="font-weight: 100; margin-top: 10px;display: inline-block;">Modelo Lineal</label>
+				<label style="font-family: 'Font Awesome\ 5 Free';color: #aaa;font-size: 24px;float:right;margin-top: 7px;cursor: pointer;font-weight: 900;" onclick="alert(this)">&#xf085;</label>
+
+				<div class="chart-container_2" style="width: 700px;height: 200px;margin-top: 10px">
+					<canvas id="chart_2" ></canvas>
+				</div>
+
+				<label style="font-weight: 100; margin-top: 10px;display: inline-block;">Modelo No Lineal Optimizado</label>
+				<label style="font-family: 'Font Awesome\ 5 Free';color: #aaa;font-size: 24px;float:right;margin-top: 7px;cursor: pointer;font-weight: 900;" onclick="alert(this)">&#xf085;</label>
+
+				<div class="chart-container_3" style="width: 700px;height: 200px;margin-top: 10px">
+					<canvas id="chart_3" ></canvas>
+				</div>
+
+				<label style="font-weight: 100; margin-top: 10px;display: inline-block;">Modelo Lineal Optimizado</label>
+				<label style="font-family: 'Font Awesome\ 5 Free';color: #aaa;font-size: 24px;float:right;margin-top: 7px;cursor: pointer;font-weight: 900;" onclick="alert(this)">&#xf085;</label>
+
+				<div class="chart-container_4" style="width: 700px;height: 200px;margin-top: 10px">
+					<canvas id="chart_4" ></canvas>
+				</div>
+
+				<label style="font-weight: 100; margin-top: 10px;display: inline-block;">Modelo Lineal Ident</label>
+				<label style="font-family: 'Font Awesome\ 5 Free';color: #aaa;font-size: 24px;float:right;margin-top: 7px;cursor: pointer;font-weight: 900;" onclick="alert(this)">&#xf085;</label>
+
+				<div class="chart-container_5" style="width: 700px;height: 200px;margin-top: 10px">
+					<canvas id="chart_5" ></canvas>
+				</div>
+
+				<label style="font-weight: 100; margin-top: 10px;display: inline-block;">Modelo No Lineal Ident</label>
+				<label style="font-family: 'Font Awesome\ 5 Free';color: #aaa;font-size: 24px;float:right;margin-top: 7px;cursor: pointer;font-weight: 900;" onclick="alert(this)">&#xf085;</label>
+
+				<div class="chart-container_6" style="width: 700px;height: 200px;margin-top: 10px">
+					<canvas id="chart_6" ></canvas>
+				</div>
+
+				<label style="font-weight: 100; margin-top: 10px;display: inline-block;">Modelo Red Neuronal</label>
+				<label style="font-family: 'Font Awesome\ 5 Free';color: #aaa;font-size: 24px;float:right;margin-top: 7px;cursor: pointer;font-weight: 900;" onclick="alert(this)">&#xf085;</label>
+
+				<div class="chart-container_7" style="width: 700px;height: 200px;margin-top: 10px">
+					<canvas id="chart_7" ></canvas>
+				</div>
+
+			</div>
+		</section>
+
+		<section id="content2">
+
+			<form>
+				<div class="contenedorTabs" style="display: inline-block;">
+
+					<input id="tab2_1" type="radio" name="tabs" checked class="input_c">
+					<label for="tab2_1" class="label_c">PID</label>
+
+					<input id="tab2_2" type="radio" name="tabs" class="input_c">
+					<label for="tab2_2" class="label_c">Adaptive Control</label>
+
+					<input id="tab2_3" type="radio" name="tabs" class="input_c">
+					<label for="tab2_3" class="label_c">Data-driven Control</label>
+
+					<section id="content2_1">a
+					</section>
+					<section id="content2_2">b
+					</section>
+					<section id="content2_3">c
+					</section>
+
+				</div>
+			</form>
+
+
+		</section>
+
+	</div>
+	
+
+
+	<div style="display: inline-block;position: relative;float:right;margin-right: 30px; background-color: #eadddd5e" >
+		<label style="display:block;text-align: center;font-size: 20px;margin: 10px;">Estado del péndulo</label>
+		<div class="parent" style="text-align: center;">
+			<img src="{% static 'img/base_pendulo.png' %}" style="width: 300px;height: auto">
+			<img src="{% static 'img/pendulo_rotor.png' %}" id = "rotor" style="width: 300px;height: auto;position: absolute;left: 277px;top:40px">
+			<label id = "ang" style="position: absolute;font-size: 20px;top:155px;left: 0;right: 0">Ángulo: 0.00 &deg;</label>
+			<label id = "volt" style="position: absolute;font-size: 20px;top:180px;left: 0;right: 0">Voltaje: 0.00 V</label>
+		</div>
+		<div class="chart-container" style="width: 576px;height: 200px;">
+			<canvas id="chart" ></canvas>
+		</div>
+		<div class="chart-container2" style="width: 576px;height: 200px;">
+			<canvas id="chart2" ></canvas>
+		</div>
+	</div>
+
+
+
+
+
+
+
+
+
+
+	<div id="myModal" class="modal">
+
+		<div class="modal-content" id="contenidoModal">
+			<span class="close">
+				<img src="{% static 'img/save_icon.png' %}" style="height: 30px;margin-right: 5px" onclick="document.getElementById('enviarForm').click()" id="butGuardar">
+				<img src="{% static 'img/close.png' %}" style="height: 30px" name="close">
+			</span>
+
+			<div id="contenidoModal">
+
+				<form id="formDatos" onsubmit="enviar_modelo();return false" method="post" autocomplete="off">
+
+					<label style="margin-left: 35px;margin-top: 20px;background: #fff;font-size: 45px;display: block;width: 90%">Modelo Matemático No Lineal</label>
+
+					<label style="font-size: 45px;">
+						$$ H(s) = \frac{s^2 + s + 1}{s-4} $$
+					</label>
+
+					<button style="visibility:hidden;position:absolute" id="enviarForm"></button>
+				</form>
+			</div>
+
+		</div>
+	</div>
+
+
+
+
+
+</body>
+
+<script type="text/javascript">
+	
+	function enviarEntrada()
+	{
+		$.ajax('/entrada_req', {method: 'post', async: false,data: ({'csrfmiddlewaretoken':Cookies.get('csrftoken'), 'campo_entrada':$('#campo_entrada').val()}), success: function(transport){
+
+			if(!modelo_activo)
+			{
+				myChart_1.config.data.datasets[0].data=[]
+				myChart_2.config.data.datasets[0].data=[]
+				myChart_3.config.data.datasets[0].data=[]
+				myChart_4.config.data.datasets[0].data=[]
+				myChart_5.config.data.datasets[0].data=[]
+				myChart_6.config.data.datasets[0].data=[]
+				myChart_7.config.data.datasets[0].data=[]
+
+				myChart.config.data.datasets[0].data=[]
+				myChart2.config.data.datasets[0].data=[]
+
+				$("#iniciar_modelo").html("&#xf04d;");
+				$("#iniciar_modelo").css({'color':'rgb(200, 0, 0)'})
+				intervalo = setInterval(actualizarDatos, 100);
+				actualizarDatos()
+				modelo_activo = true
+			}
+			else
+			{
+				$("#iniciar_modelo").html("&#xf04b;");
+				$("#iniciar_modelo").css({'color':'green'})
+				clearInterval(intervalo)
+				modelo_activo = false
+			}
+
+		}})
+
+
+	}
+
+</script>
+
+<script type="text/javascript">
+	function actualizarDatos()
+	{
+		$.ajax('/actualizarDatos', {method: 'post',data: ({'csrfmiddlewaretoken':Cookies.get('csrftoken')}), success: function(transport){
+			respuesta = JSON.parse(transport)
+
+			addData(myChart, parseFloat(respuesta['tiempo']), respuesta['angulo'])
+			addData(myChart2, respuesta['tiempo'], respuesta['voltaje'])
+
+			addData(myChart_1, respuesta['tiempo'], respuesta['angulo'])
+			addData(myChart_2, respuesta['tiempo'], respuesta['angulo'])
+			addData(myChart_3, respuesta['tiempo'], respuesta['angulo'])
+			addData(myChart_4, respuesta['tiempo'], respuesta['angulo'])
+			addData(myChart_5, respuesta['tiempo'], respuesta['angulo'])
+			addData(myChart_6, respuesta['tiempo'], respuesta['angulo'])
+			addData(myChart_7, respuesta['tiempo'], respuesta['angulo'])
+
+
+			$("#rotor").rotate({duration:100,center: ["11.59px", "54.62px"],animateTo:-parseInt(respuesta['angulo'])})
+
+			$("#ang").html("Ángulo: "+parseFloat(respuesta['angulo']).toFixed(2)+" &deg;")
+			$("#volt").html("Voltaje: "+parseFloat(respuesta['voltaje']).toFixed(2)+" V")
+
+
+		}});
+	}
+	
+</script>
+
+<script type="text/javascript">
+
+	var ctx = document.getElementById("chart").getContext('2d');
+	myChart = new Chart(ctx, {
+		type: 'line',
+		data: {
+			datasets: [{ 
+				data: [],
+				label: "Posición (Grados)",
+				borderColor: "#cd3e3e",
+				fill: false
+			}]},
+			options: {
+				events: [],
+				maintainAspectRatio: false,
+				title: {
+					display: true,
+					text: 'Ángulo del péndulo'
+				},
+				legend: {
+					display: false,
+				},
+				scales: {
+					yAxes: [{
+						scaleLabel: {
+							display: true,
+							labelString: 'Ángulo (deg)'
+						}
+					}],
+					xAxes: [{
+						type: 'linear',
+						ticks: {
+							display: true,
+							maxRotation: 0,
+							minRotation: 0
+						}
+					}]
+				}    
+			}
+		});
+
+
+	var ctx2 = document.getElementById("chart2").getContext('2d');
+	myChart2 = new Chart(ctx2, {
+		type: 'line',
+		data: {
+			datasets: [{ 
+				data: [],
+				label: "Voltaje (V)",
+				borderColor: "#cd3e3e",
+				fill: false
+			}]},
+			options: {
+				events: [],
+				maintainAspectRatio: false,
+				title: {
+					display: true,
+					text: 'Voltaje del motor'
+				},
+				legend: {
+					display: false,
+				},
+				scales: {
+					yAxes: [{
+						scaleLabel: {
+							display: true,
+							labelString: 'Voltaje (V)'
+						}
+					}],
+					xAxes: [{
+						type: 'linear',
+						ticks: {
+							display: true,
+							maxRotation: 0,
+							minRotation: 0
+						}
+					}]
+				}    
+			}
+		});
+
+	var ctx3 = document.getElementById("chart_1").getContext('2d');
+	myChart_1 = new Chart(ctx3, {
+		type: 'line',
+		data: {
+			datasets: [{ 
+				data: [],
+				label: "",
+				borderColor: "#cd3e3e",
+				fill: false
+			}]},
+			options: {
+				events: [],
+				maintainAspectRatio: false,
+				legend: {
+					display: false,
+				},
+				scales: {
+					yAxes: [{
+						scaleLabel: {
+							display: true,
+							labelString: 'Ángulo (deg)'
+						}
+					}],
+					xAxes: [{
+						type: 'linear',
+						ticks: {
+							display: true,
+							maxRotation: 0,
+							minRotation: 0
+						}
+					}]
+				}    
+			}
+		});
+
+
+	var ctx4 = document.getElementById("chart_2").getContext('2d');
+	myChart_2 = new Chart(ctx4, {
+		type: 'line',
+		data: {
+			datasets: [{ 
+				data: [],
+				label: "",
+				borderColor: "#cd3e3e",
+				fill: false
+			}]},
+			options: {
+				events: [],
+				maintainAspectRatio: false,
+				legend: {
+					display: false,
+				},
+				scales: {
+					yAxes: [{
+						scaleLabel: {
+							display: true,
+							labelString: 'Ángulo (deg)'
+						}
+					}],
+					xAxes: [{
+						type: 'linear',
+						ticks: {
+							display: true,
+							maxRotation: 0,
+							minRotation: 0
+						}
+					}]
+				}    
+			}
+		});
+
+	var ctx5 = document.getElementById("chart_3").getContext('2d');
+	myChart_3 = new Chart(ctx5, {
+		type: 'line',
+		data: {
+			datasets: [{ 
+				data: [],
+				label: "",
+				borderColor: "#cd3e3e",
+				fill: false
+			}]},
+			options: {
+				events: [],
+				maintainAspectRatio: false,
+				legend: {
+					display: false,
+				},
+				scales: {
+					yAxes: [{
+						scaleLabel: {
+							display: true,
+							labelString: 'Ángulo (deg)'
+						}
+					}],
+					xAxes: [{
+						type: 'linear',
+						ticks: {
+							display: true,
+							maxRotation: 0,
+							minRotation: 0
+						}
+					}]
+				}    
+			}
+		});
+
+
+	var ctx6 = document.getElementById("chart_4").getContext('2d');
+	myChart_4 = new Chart(ctx6, {
+		type: 'line',
+		data: {
+			datasets: [{ 
+				data: [],
+				label: "",
+				borderColor: "#cd3e3e",
+				fill: false
+			}]},
+			options: {
+				events: [],
+				maintainAspectRatio: false,
+				legend: {
+					display: false,
+				},
+				scales: {
+					yAxes: [{
+						scaleLabel: {
+							display: true,
+							labelString: 'Ángulo (deg)'
+						}
+					}],
+					xAxes: [{
+						type: 'linear',
+						ticks: {
+							display: true,
+							maxRotation: 0,
+							minRotation: 0
+						}
+					}]
+				}    
+			}
+		});
+
+	var ctx7 = document.getElementById("chart_5").getContext('2d');
+	myChart_5 = new Chart(ctx7, {
+		type: 'line',
+		data: {
+			datasets: [{ 
+				data: [],
+				label: "",
+				borderColor: "#cd3e3e",
+				fill: false
+			}]},
+			options: {
+				events: [],
+				maintainAspectRatio: false,
+				legend: {
+					display: false,
+				},
+				scales: {
+					yAxes: [{
+						scaleLabel: {
+							display: true,
+							labelString: 'Ángulo (deg)'
+						}
+					}],
+					xAxes: [{
+						type: 'linear',
+						ticks: {
+							display: true,
+							maxRotation: 0,
+							minRotation: 0
+						}
+					}]
+				}    
+			}
+		});
+
+	var ctx8 = document.getElementById("chart_6").getContext('2d');
+	myChart_6 = new Chart(ctx8, {
+		type: 'line',
+		data: {
+			datasets: [{ 
+				data: [],
+				label: "",
+				borderColor: "#cd3e3e",
+				fill: false
+			}]},
+			options: {
+				events: [],
+				maintainAspectRatio: false,
+				legend: {
+					display: false,
+				},
+				scales: {
+					yAxes: [{
+						scaleLabel: {
+							display: true,
+							labelString: 'Ángulo (deg)'
+						}
+					}],
+					xAxes: [{
+						type: 'linear',
+						ticks: {
+							display: true,
+							maxRotation: 0,
+							minRotation: 0
+						}
+					}]
+				}    
+			}
+		});
+
+	var ctx9 = document.getElementById("chart_7").getContext('2d');
+	myChart_7 = new Chart(ctx9, {
+		type: 'line',
+		data: {
+			datasets: [{ 
+				data: [],
+				label: "",
+				borderColor: "#cd3e3e",
+				fill: false
+			}]},
+			options: {
+				events: [],
+				maintainAspectRatio: false,
+				legend: {
+					display: false,
+				},
+				scales: {
+					yAxes: [{
+						scaleLabel: {
+							display: true,
+							labelString: 'Ángulo (deg)'
+						}
+					}],
+					xAxes: [{
+						type: 'linear',
+						ticks: {
+							display: true,
+							maxRotation: 0,
+							minRotation: 0
+						}
+					}]
+				}    
+			}
+		});
+
+	function addData(chart, label, data) {
+
+
+		if (myChart.data.datasets[0].data.length < 150)
+		{
+			chart.data.datasets.forEach((dataset) => {
+				dataset.data.push({x:label,y:data});
+			});
+		}
+		else
+		{
+			chart.data.datasets[0].data.shift()
+
+			chart.data.datasets.forEach((dataset) => {
+				dataset.data.push({x:label,y:data});
+			});
+		}
+
+		xdata = []
+		for (i=0; i<chart.data.datasets[0].data.length; i++){
+			xdata.push(chart.data.datasets[0].data[i].x)
+		}
+
+		min = Math.min.apply(Math,xdata)
+		max = Math.max.apply(Math,xdata)
+
+		chart.config.options.scales.xAxes[0].ticks.min = min
+		chart.config.options.scales.xAxes[0].ticks.max = max
+
+		chart.update(0);
+	}
+
+</script>
+
+<script type="text/javascript">
+	
+	var modal = document.getElementById('myModal');
+	var span = document.getElementsByName("close")[0];
+
+
+	span.onclick = function() {
+		var modal = document.getElementById('myModal');
+		modal.style.display = "none";
+	}
+
+	window.onclick = function(event) {
+		var modal = document.getElementById('myModal');
+		if (event.target == modal) {
+			modal.style.display = "none";
+		}
+	}
+</script>
+
+</html>
